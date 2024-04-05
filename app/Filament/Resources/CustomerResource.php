@@ -6,6 +6,8 @@ use App\Filament\Resources\CustomerResource\Pages;
 use App\Models\Customer;
 use App\Models\CustomField;
 use App\Models\PipelineStage;
+use App\Models\Role;
+use App\Models\User;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
@@ -19,6 +21,8 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Support\Colors\Color;
+use http\Header;
+use Illuminate\Mail\Mailables\Headers;
 use Illuminate\Support\Facades\Storage;
 
 class CustomerResource extends Resource
@@ -96,6 +100,12 @@ class CustomerResource extends Resource
     {
         return $form
             ->schema([
+                Forms\Components\Section::make('Employee Information')
+                    ->schema([
+                        Forms\Components\Select::make('employee_id')
+                            ->options(User::where('role_id', Role::where('name', 'Employee')->first()->id)->pluck('name', 'id'))
+                    ])
+                    ->hidden(!auth()->user()->isAdmin()),
                 Forms\Components\Section::make('Customer Information')
                     ->schema(
                         [
@@ -186,6 +196,8 @@ class CustomerResource extends Resource
                 return $query->with('tags');
             })
             ->columns([
+                Tables\Columns\TextColumn::make('employee.name')
+                    ->hidden(!auth()->user()->isAdmin()),
                 Tables\Columns\TextColumn::make('first_name')
                     ->searchable()
                     ->label('Name')
@@ -233,15 +245,18 @@ class CustomerResource extends Resource
             ])
             ->actions([
                 Tables\Actions\EditAction::make()
+                    ->label('')
+                    ->tooltip('Edit Customer')
                     ->hidden(fn($record) => $record->trashed())
                     ->disabled(function ($record) {
                         return $record->pipelineStage->position == 4;
                     }),
                 Tables\Actions\Action::make('Move to Stage')
+                    ->label('')
                     ->hidden(fn($record) => $record->trashed())
                     ->disabled(fn($record) => $record->pipelineStage->position == 4 || $record->pipelineStage->position == 5)
                     ->tooltip('Move to a different stage (Cannot perform action if the stage is rejected of is already a customer)')
-                    ->icon('heroicon-m-pencil-square')
+                    ->icon('heroicon-m-chevron-double-right')
                     ->form([
                         Forms\Components\Select::make('pipeline_stage_id')
                             ->label('Status')
@@ -268,7 +283,9 @@ class CustomerResource extends Resource
                             ->success()
                             ->send();
                     }),
-                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\DeleteAction::make()
+                ->label('')
+                ->tooltip('Delete Customer'),
                 Tables\Actions\RestoreAction::make(),
             ])
             ->recordUrl(function ($record) {
