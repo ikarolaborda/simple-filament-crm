@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Customer;
+use App\Models\CustomField;
 use App\Models\LeadSource;
 use App\Models\PipelineStage;
 use App\Models\Tag;
@@ -82,6 +83,17 @@ class DatabaseSeeder extends Seeder
             $randomTagIds = $allTagIds->random(rand(1, $allTagIds->count()))->all();
             $customer->tags()->attach($randomTagIds);
         });
+
+        $customFields = [
+            'Birth Date',
+            'Company',
+            'Job Title',
+            'Family Members',
+        ];
+
+        foreach ($customFields as $customField) {
+            CustomField::create(['name' => $customField]);
+        }
 
         User::factory()->create([
             'email' => 'admin@admin.com',
