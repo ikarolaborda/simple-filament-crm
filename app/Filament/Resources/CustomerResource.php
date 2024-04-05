@@ -7,6 +7,7 @@ use App\Models\Customer;
 use App\Models\PipelineStage;
 use Filament\Forms;
 use Filament\Forms\Form;
+use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\ViewEntry;
 use Filament\Infolists\Infolist;
 use Filament\Infolists\Components\Section;
@@ -15,6 +16,8 @@ use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Support\Colors\Color;
+use Illuminate\Support\Facades\Storage;
 
 class CustomerResource extends Resource
 {
@@ -49,6 +52,23 @@ class CustomerResource extends Resource
                         TextEntry::make('pipelineStage.name'),
                     ])
                     ->columns(),
+                Section::make('Documents')
+                    // This will hide the section if there are no documents
+                    ->hidden(fn($record) => $record->documents->isEmpty())
+                    ->schema([
+                        RepeatableEntry::make('documents')
+                            ->hiddenLabel()
+                            ->schema([
+                                TextEntry::make('file_path')
+                                    ->label('Document')
+                                    ->formatStateUsing(fn() => "Download Document")
+                                    ->url(fn($record) => Storage::url($record->file_path), true)
+                                    ->badge()
+                                    ->color(Color::Blue),
+                                TextEntry::make('comments'),
+                            ])
+                            ->columns()
+                    ]),
                 Section::make('Pipeline Stage History and Notes')
                     ->schema([
                         ViewEntry::make('pipelineStageLogs')
