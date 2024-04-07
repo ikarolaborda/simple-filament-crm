@@ -9,10 +9,10 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
-        "dompdf/dompdf": "^2.0",
         "filament/filament": "^3.2",
         "laravel/framework": "^11.0",
         "laravel/tinker": "^2.9",
+        "laraveldaily/laravel-invoices": "^4.0",
         "saade/filament-fullcalendar": "^3.0"
     },
     "require-dev": {

@@ -13,17 +13,32 @@ use Filament\Forms\Components\Section;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
+use Filament\Infolists\Components\ViewEntry;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Filament\Infolists\Infolist;
 
 class QuoteResource extends Resource
 {
     protected static ?string $model = Quote::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-at-symbol';
+
+    public static function infolist(Infolist $infolist): Infolist
+    {
+        return $infolist
+            ->schema([
+                ViewEntry::make('invoice')
+                    ->columnSpanFull()
+                    ->viewData([
+                        'record' => $infolist->record
+                    ])
+                    ->view('infolists.components.quote-invoice-view')
+            ]);
+    }
 
     public static function form(Form $form): Form
     {
@@ -63,7 +78,7 @@ class QuoteResource extends Resource
                                     ->afterStateUpdated(function (Get $get, $livewire) {
                                         self::updateTotals($get, $livewire);
                                     })
-                                    ->prefix('$'),
+                                    ->prefix('€'),
                                 Forms\Components\TextInput::make('quantity')
                                     ->integer()
                                     ->default(1)
@@ -90,7 +105,7 @@ class QuoteResource extends Resource
                         Forms\Components\TextInput::make('subtotal')
                             ->numeric()
                             ->readOnly()
-                            ->prefix('$')
+                            ->prefix('€')
                             ->afterStateUpdated(function (Get $get, $livewire) {
                                 self::updateTotals($get, $livewire);
                             }),
@@ -106,7 +121,7 @@ class QuoteResource extends Resource
                         Forms\Components\TextInput::make('total')
                             ->numeric()
                             ->readOnly()
-                            ->prefix('$')
+                            ->prefix('€')
                     ])
             ]);
     }
@@ -147,11 +162,11 @@ class QuoteResource extends Resource
                     ->sortable(),
                 Tables\Columns\TextColumn::make('subtotal')
                     ->numeric()
-                    ->money()
+                    ->money(currency: 'eur')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('total')
                     ->numeric()
-                    ->money()
+                    ->money(currency: 'eur')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
