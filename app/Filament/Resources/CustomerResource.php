@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\CustomerResource\Pages;
+use App\Filament\Resources\QuoteResource\Pages\CreateQuote;
 use App\Models\Customer;
 use App\Models\CustomField;
 use App\Models\PipelineStage;
@@ -305,74 +306,78 @@ class CustomerResource extends Resource
                 //
             ])
             ->actions([
-                Tables\Actions\EditAction::make()
-                    ->label('')
-                    ->tooltip('Edit Customer')
-                    ->hidden(fn($record) => $record->trashed())
-                    ->disabled(function ($record) {
-                        return $record->pipelineStage->position == 4;
-                    }),
-                Tables\Actions\Action::make('Move to Stage')
-                    ->label('')
-                    ->hidden(fn($record) => $record->trashed())
-                    ->disabled(fn($record) => $record->pipelineStage->position == 4 || $record->pipelineStage->position == 5)
-                    ->tooltip('Move to a different stage (Cannot perform action if the stage is rejected of is already a customer)')
-                    ->icon('heroicon-m-chevron-double-right')
-                    ->form([
-                        Forms\Components\Select::make('pipeline_stage_id')
-                            ->label('Status')
-                            ->options(PipelineStage::pluck('name', 'id')->toArray())
-                            ->default(function (Customer $record) {
-                                $currentPosition = $record->pipelineStage->position;
-                                return PipelineStage::where('position', '>', $currentPosition)->first()?->id;
-                            }),
-                        Forms\Components\Textarea::make('notes')
-                            ->label('Notes')
-                    ])
-                    ->action(function (Customer $customer, array $data): void {
-                        $customer->pipeline_stage_id = $data['pipeline_stage_id'];
-                        $customer->save();
+                Tables\Actions\ActionGroup::make([
+                    Tables\Actions\EditAction::make()
+                        ->tooltip('Edit Customer')
+                        ->hidden(fn($record) => $record->trashed())
+                        ->disabled(function ($record) {
+                            return $record->pipelineStage->position == 4;
+                        }),
+                    Tables\Actions\Action::make('Move to Stage')
+                        ->hidden(fn($record) => $record->trashed())
+                        ->disabled(fn($record) => $record->pipelineStage->position == 4 || $record->pipelineStage->position == 5)
+                        ->tooltip('Move to a different stage (Cannot perform action if the stage is rejected of is already a customer)')
+                        ->icon('heroicon-m-chevron-double-right')
+                        ->form([
+                            Forms\Components\Select::make('pipeline_stage_id')
+                                ->label('Status')
+                                ->options(PipelineStage::pluck('name', 'id')->toArray())
+                                ->default(function (Customer $record) {
+                                    $currentPosition = $record->pipelineStage->position;
+                                    return PipelineStage::where('position', '>', $currentPosition)->first()?->id;
+                                }),
+                            Forms\Components\Textarea::make('notes')
+                                ->label('Notes')
+                        ])
+                        ->action(function (Customer $customer, array $data): void {
+                            $customer->pipeline_stage_id = $data['pipeline_stage_id'];
+                            $customer->save();
 
-                        $customer->pipelineStageLogs()->create([
-                            'pipeline_stage_id' => $data['pipeline_stage_id'],
-                            'notes' => $data['notes'],
-                            'user_id' => auth()->id()
-                        ]);
+                            $customer->pipelineStageLogs()->create([
+                                'pipeline_stage_id' => $data['pipeline_stage_id'],
+                                'notes' => $data['notes'],
+                                'user_id' => auth()->id()
+                            ]);
 
-                        Notification::make()
-                            ->title('Customer Pipeline Updated')
-                            ->success()
-                            ->send();
-                    }),
-                Tables\Actions\Action::make('Add Task')
-                    ->label('')
-                    ->tooltip('Add a new task')
-                    ->icon('heroicon-s-clipboard-document')
-                    ->form([
-                        Forms\Components\RichEditor::make('description')
-                            ->required(),
-                        Forms\Components\Select::make('user_id')
-                            ->preload()
-                            ->searchable()
-                            ->relationship('employee', 'name'),
-                        Forms\Components\DatePicker::make('due_date')
-                            ->native(false),
+                            Notification::make()
+                                ->title('Customer Pipeline Updated')
+                                ->success()
+                                ->send();
+                        }),
+                    Tables\Actions\Action::make('Add Task')
+                        ->tooltip('Add a new task')
+                        ->icon('heroicon-s-clipboard-document')
+                        ->form([
+                            Forms\Components\RichEditor::make('description')
+                                ->required(),
+                            Forms\Components\Select::make('user_id')
+                                ->preload()
+                                ->searchable()
+                                ->relationship('employee', 'name'),
+                            Forms\Components\DatePicker::make('due_date')
+                                ->native(false),
 
-                    ])
-                    ->action(function (Customer $customer, array $data) {
-                        $customer->tasks()->create($data);
+                        ])
+                        ->action(function (Customer $customer, array $data) {
+                            $customer->tasks()->create($data);
 
-                        Notification::make()
-                            ->title('Task created successfully')
-                            ->success()
-                            ->send();
-                    }),
-                Tables\Actions\DeleteAction::make()
-                ->label('')
-                ->tooltip('Delete Customer'),
-                Tables\Actions\RestoreAction::make(),
-            ])
-            ->recordUrl(function ($record) {
+                            Notification::make()
+                                ->title('Task created successfully')
+                                ->success()
+                                ->send();
+                        }),
+                    Tables\Actions\Action::make('Create Quote')
+                        ->tooltip('Create a quote for customer')
+                        ->icon('heroicon-m-book-open')
+                        ->url(function ($record) {
+                            return CreateQuote::getUrl(['customer_id' => $record->id]);
+                        }),
+                    Tables\Actions\DeleteAction::make()
+                        ->tooltip('Delete Customer'),
+                    Tables\Actions\RestoreAction::make(),
+                ])
+
+                ])->recordUrl(function ($record) {
                 // If the record is trashed, return null
                 if ($record->trashed()) {
                     // Null will disable the row click
